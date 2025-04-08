@@ -1,0 +1,84 @@
+- name: Bootstrap system with ansible-pull
+  hosts: localhost
+  connection: local
+  become: true
+
+  tasks:
+    - name: Update apt cache and upgrade packages
+      ansible.builtin.apt:
+        update_cache: yes
+        upgrade: dist
+        cache_valid_time: 3600
+
+    - name: Install mailutils for sending notification emails
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+      ansible.builtin.apt:
+        name: mailutils
+        state: present
+
+    - name: Ensure Postfix is installed for local delivery
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+      ansible.builtin.apt:
+        name: postfix
+        state: present
+
+    - name: Configure Postfix for local only (No internet SMTP)
+      ansible.builtin.debconf:
+        name: postfix
+        question: 'postfix/main_mailer_type'
+        value: 'Local only'
+        vtype: select
+
+    - name: Install unattended-upgrades and dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - software-properties-common
+          - unattended-upgrades
+        state: present
+
+    - name: Configure unattended-upgrades to allow all origins
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/52unattended-upgrades-local
+        content: |
+          Unattended-Upgrade::Allowed-Origins {
+              "${distro_id}:${distro_codename}";
+              "${distro_id}:${distro_codename}-updates";
+              "${distro_id}:${distro_codename}-proposed";
+              "${distro_id}:${distro_codename}-backports";
+          };
+          Unattended-Upgrade::Automatic-Reboot "false";
+          Unattended-Upgrade::Remove-Unused-Dependencies "true";
+
+    - name: Enable automatic security updates
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Download-Upgradeable-Packages "1";
+          APT::Periodic::AutocleanInterval "7";
+          APT::Periodic::Unattended-Upgrade "1";
+
+    - name: Ensure cron is installed
+      ansible.builtin.apt:
+        name: cron
+        state: present
+
+    - name: Copy ansible-pull.sh script
+      ansible.builtin.copy:
+        src: templates/ansible-pull.sh
+        dest: /usr/local/bin/ansible-pull.sh
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Set up daily cron job to run ansible-pull.sh
+      ansible.builtin.cron:
+        name: "Daily ansible-pull"
+        user: root
+        minute: 0
+        hour: 3
+        job: "/usr/local/bin/ansible-pull.sh"

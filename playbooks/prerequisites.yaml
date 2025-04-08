@@ -1,0 +1,15 @@
+- name: Install Ansible Galaxy requirements
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: false
+
+  vars:
+    requirements_file: "./requirements.yml"
+
+  tasks:
+    - name: Install Galaxy roles and collections from requirements.yml
+      ansible.builtin.command: >
+        ansible-galaxy install -r {{ requirements_file }} --force
+      args:
+        chdir: "{{ playbook_dir }}/.."
