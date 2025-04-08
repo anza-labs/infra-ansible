@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 
 set -eu
-set -o pipefail
 
 REPO_URL="https://github.com/anza-labs/infra-ansible.git"
 LOG_FILE="/var/log/ansible-pull.log"
