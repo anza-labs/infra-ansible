@@ -2,37 +2,37 @@
   hosts: localhost
   connection: local
   become: true
+  gather_facts: true
 
   tasks:
-    - name: Update apt cache and upgrade packages
+    - name: Update apt cache and upgrade packages (Debian)
+      when: ansible_facts.os_family == "Debian"
       ansible.builtin.apt:
         update_cache: yes
         upgrade: dist
         cache_valid_time: 3600
 
-    - name: Install mailutils for sending notification emails
+    - name: Install mailutils and postfix (Debian)
+      when: ansible_facts.os_family == "Debian"
       environment:
         DEBIAN_FRONTEND: noninteractive
       ansible.builtin.apt:
-        name: mailutils
+        name:
+          - mailutils
+          - postfix
         state: present
 
-    - name: Ensure Postfix is installed for local delivery
-      environment:
-        DEBIAN_FRONTEND: noninteractive
-      ansible.builtin.apt:
-        name: postfix
-        state: present
-
-    - name: Configure Postfix for local only (No internet SMTP)
+    - name: Configure Postfix for local only (Debian)
+      when: ansible_facts.os_family == "Debian"
       ansible.builtin.debconf:
         name: postfix
         question: 'postfix/main_mailer_type'
         value: 'Local only'
         vtype: select
 
-    - name: Install unattended-upgrades and dependencies
-      apt:
+    - name: Install unattended-upgrades and deps (Debian)
+      when: ansible_facts.os_family == "Debian"
+      ansible.builtin.apt:
         name:
           - apt-transport-https
           - ca-certificates
@@ -40,7 +40,7 @@
           - unattended-upgrades
         state: present
 
-    - name: Configure unattended-upgrades to allow all origins
+    - name: Configure unattended-upgrades (Debian)
       ansible.builtin.copy:
         dest: /etc/apt/apt.conf.d/52unattended-upgrades-local
         content: |
@@ -52,8 +52,9 @@
           };
           Unattended-Upgrade::Automatic-Reboot "false";
           Unattended-Upgrade::Remove-Unused-Dependencies "true";
+      when: ansible_facts.os_family == "Debian"
 
-    - name: Enable automatic security updates
+    - name: Enable auto-upgrades (Debian)
       ansible.builtin.copy:
         dest: /etc/apt/apt.conf.d/20auto-upgrades
         content: |
@@ -61,10 +62,26 @@
           APT::Periodic::Download-Upgradeable-Packages "1";
           APT::Periodic::AutocleanInterval "7";
           APT::Periodic::Unattended-Upgrade "1";
+      when: ansible_facts.os_family == "Debian"
 
-    - name: Ensure cron is installed
+    - name: Ensure cron is installed (Debian)
+      when: ansible_facts.os_family == "Debian"
       ansible.builtin.apt:
-        name: cron
+        name:
+          - cron
+        state: present
+
+    - name: Upgrade packages (Alpine)
+      when: ansible_facts.os_family == "Alpine"
+      ansible.builtin.apk:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Ensure cron is installed (Alpine)
+      when: ansible_facts.os_family == "Alpine"
+      ansible.builtin.apk:
+        name:
+          - dcron
         state: present
 
     - name: Copy ansible-pull.sh script
