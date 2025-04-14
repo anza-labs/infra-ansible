@@ -73,13 +73,13 @@
 
     - name: Upgrade packages (Alpine)
       when: ansible_facts.os_family == "Alpine"
-      ansible.builtin.apk:
+      community.general.apk:
         update_cache: yes
         upgrade: yes
 
     - name: Ensure cron is installed (Alpine)
       when: ansible_facts.os_family == "Alpine"
-      ansible.builtin.apk:
+      community.general.apk:
         name:
           - dcron
         state: present
