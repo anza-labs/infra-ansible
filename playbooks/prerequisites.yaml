@@ -1,7 +1,6 @@
 - name: Install Ansible Galaxy requirements
   hosts: localhost
   connection: local
-  become: true
   gather_facts: false
 
   vars:
